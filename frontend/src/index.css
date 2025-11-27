@@ -1,0 +1,4 @@
+@import "tailwindcss";
+/* Tailwind v4: use utility classes directly in JSX/HTML.
+   Keep CSS minimal to avoid `@apply` constraints. */
+html, body, #root { height: 100%; }
