@@ -1,19 +1,50 @@
-import React from 'react';
-
-// Mock data to show the dashboard layout before connecting to Supabase
-const MOCK_THREAT_LOGS = [
-  { id: 1, timestamp: '2025-11-27 14:30:00', threat_type: 'Prompt_Injection', input_prompt: 'Ignore all previous...', blocked_content: 'ignore all previous', user_id: 'user-001' },
-  { id: 2, timestamp: '2025-11-27 14:35:15', threat_type: 'Unsafe_Content', input_prompt: 'I hate those people...', blocked_content: 'hate', user_id: 'user-002' },
-  { id: 3, timestamp: '2025-11-27 14:40:40', threat_type: 'Hallucination', input_prompt: 'Tell me a fact...', blocked_content: 'fact check failed: 99.9%', user_id: 'user-003' },
-  { id: 4, timestamp: '2025-11-27 14:45:05', threat_type: 'Prompt_Injection', input_prompt: 'Disregard the rules', blocked_content: 'Disregard', user_id: 'user-001' },
-];
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 function ShieldDashboard() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [rules, setRules] = useState([]);
+  const [newRule, setNewRule] = useState({ rule_name: '', type: 'KEYWORD_BLOCK', value: '' });
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const [logsRes, rulesRes] = await Promise.all([
+        axios.get('/api/logs?limit=50'),
+        axios.get('/api/rules'),
+      ]);
+      setLogs(Array.isArray(logsRes.data?.data) ? logsRes.data.data : []);
+      setRules(Array.isArray(rulesRes.data?.data) ? rulesRes.data.data : []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addRule = async (e) => {
+    e.preventDefault();
+    if (!newRule.rule_name || !newRule.value) return;
+    try {
+      await axios.post('/api/rules', newRule);
+      setNewRule({ rule_name: '', type: 'KEYWORD_BLOCK', value: '' });
+      fetchData();
+    } catch (err) {
+      setError(err?.message || 'Failed to add rule');
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
   
   // Calculate some quick stats for the overview panel
-  const totalLogs = MOCK_THREAT_LOGS.length;
-  const injectionCount = MOCK_THREAT_LOGS.filter(log => log.threat_type === 'Prompt_Injection').length;
-  const hallucinationCount = MOCK_THREAT_LOGS.filter(log => log.threat_type === 'Hallucination').length;
+  const totalLogs = logs.length;
+  const injectionCount = logs.filter(log => log.threat_type === 'Prompt_Injection').length;
+  const hallucinationCount = logs.filter(log => log.threat_type === 'Hallucination').length;
 
   return (
     <div className="p-4">
@@ -28,7 +59,12 @@ function ShieldDashboard() {
 
       {/* --- THREAT LOG VIEW --- */}
       <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-        <h3 className="text-xl font-semibold mb-4 text-white">Recent Threat Activity</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold mb-4 text-white">Recent Threat Activity</h3>
+          <button onClick={fetchData} className="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-3 rounded-lg">Refresh</button>
+        </div>
+        {loading && <p className="text-gray-400">Loading…</p>}
+        {error && <p className="text-red-400">{error}</p>}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-700">
             <thead className="bg-gray-700">
@@ -41,9 +77,9 @@ function ShieldDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {MOCK_THREAT_LOGS.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-600 transition duration-150">
-                  <TableData>{log.timestamp.split(' ')[1]}</TableData>
+              {logs.map((log, idx) => (
+                <tr key={log.id || idx} className="hover:bg-gray-600 transition duration-150">
+                  <TableData>{(log.timestamp || '').toString().split('T')[1] || ''}</TableData>
                   <TableData>
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                       ${log.threat_type === 'Prompt_Injection' ? 'bg-yellow-100 text-yellow-800' : 
@@ -53,16 +89,35 @@ function ShieldDashboard() {
                     </span>
                   </TableData>
                   <TableData className="truncate max-w-xs">{log.input_prompt}</TableData>
-                  <TableData className="font-mono text-xs text-red-300">{log.blocked_content}</TableData>
-                  <TableData>{log.user_id}</TableData>
+                  <TableData className="font-mono text-xs text-red-300">{String(log.blocked_content).slice(0, 120)}</TableData>
+                  <TableData>{log.user_id || '—'}</TableData>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="mt-4 text-sm italic text-gray-400">
-          *Data shown is mock data. Connect Supabase to fetch live logs.
-        </p>
+        <p className="mt-4 text-sm italic text-gray-400">*Mock mode using in-memory logs.</p>
+      </div>
+
+      {/* --- RULESET EDITOR --- */}
+      <div className="bg-gray-800 p-6 rounded-xl shadow-lg mt-8">
+        <h3 className="text-xl font-semibold mb-4 text-white">Ruleset Editor (Mock)</h3>
+        <form onSubmit={addRule} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input className="bg-gray-700 text-white p-2 rounded" placeholder="Rule Name" value={newRule.rule_name} onChange={(e) => setNewRule({ ...newRule, rule_name: e.target.value })} />
+          <select className="bg-gray-700 text-white p-2 rounded" value={newRule.type} onChange={(e) => setNewRule({ ...newRule, type: e.target.value })}>
+            <option value="KEYWORD_BLOCK">KEYWORD_BLOCK</option>
+          </select>
+          <input className="bg-gray-700 text-white p-2 rounded" placeholder="Value" value={newRule.value} onChange={(e) => setNewRule({ ...newRule, value: e.target.value })} />
+          <button type="submit" className="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-3 rounded">Add Rule</button>
+        </form>
+        <div className="mt-4">
+          <h4 className="text-white font-semibold mb-2">Current Rules</h4>
+          <ul className="space-y-1">
+            {rules.map((r, idx) => (
+              <li key={r.id || idx} className="text-gray-300 text-sm">• [{r.type}] {r.rule_name}: <span className="font-mono">{r.value}</span></li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

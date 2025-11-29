@@ -1,6 +1,8 @@
 from fastapi import APIRouter
+from pydantic import BaseModel
 from ..db.models import ShieldRequest, ShieldResponse
 from ..logic.shield_core import pre_process_input, post_process_output
+from ..db.supabase_client import get_threat_logs, get_ruleset, add_rule
 # NOTE: Replace this mock function with your actual LLM call logic
 # e.g., using OpenAI, Anthropic, or a local model interface
 from time import sleep 
@@ -53,3 +55,30 @@ async def process_shield_request(request: ShieldRequest):
     final_shielded_response = await post_process_output(final_request, llm_output)
     
     return final_shielded_response
+
+
+# --- Dashboard Helpers ---
+
+@router.get("/logs")
+async def fetch_logs(limit: int = 50):
+    """Return recent threat logs for the dashboard (mock/in-memory)."""
+    logs = await get_threat_logs(limit=limit)
+    return {"data": logs}
+
+@router.get("/rules")
+async def fetch_rules():
+    """Return current ruleset (mock/in-memory)."""
+    rules = await get_ruleset()
+    return {"data": rules}
+
+class NewRule(BaseModel):
+    rule_name: str
+    type: str
+    value: str
+    is_active: bool = True
+
+@router.post("/rules")
+async def create_rule(rule: NewRule):
+    """Add a new rule to the ruleset (mock/in-memory)."""
+    result = await add_rule(rule.rule_name, rule.type, rule.value, rule.is_active)
+    return result
