@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // Target the port where your Uvicorn/FastAPI server is running
-        target: 'http://127.0.0.1:8000', 
+        target: 'http://localhost:8000',
         changeOrigin: true,
         // Optional: rewrite the path if needed, but not necessary here
         // rewrite: (path) => path.replace(/^\/api/, '')

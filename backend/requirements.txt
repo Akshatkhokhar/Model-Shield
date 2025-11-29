@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic
 supabase  # <--- Changed from supabase-py
 python-dotenv
+joblib
 # You'll likely need one of these for the actual filtering/checking:
 # regex
 # OR

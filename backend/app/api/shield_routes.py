@@ -1,11 +1,12 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+from typing import Union
 from ..db.models import ShieldRequest, ShieldResponse
 from ..logic.shield_core import pre_process_input, post_process_output
 from ..db.supabase_client import get_threat_logs, get_ruleset, add_rule
 # NOTE: Replace this mock function with your actual LLM call logic
 # e.g., using OpenAI, Anthropic, or a local model interface
-from time import sleep 
+from time import sleep
 
 router = APIRouter()
 
@@ -31,14 +32,18 @@ def call_llm(prompt: str) -> str:
 
 
 @router.post("/shield", response_model=ShieldResponse)
-async def process_shield_request(request: ShieldRequest):
+async def process_shield_request(request: Union[str, ShieldRequest]):
     """
     Main endpoint for the Model Shield.
     1. Runs Pre-Processing (Input Shield).
     2. Calls the LLM (if not blocked).
     3. Runs Post-Processing (Output Shield).
     """
-    
+
+    # Handle if request is a string
+    if isinstance(request, str):
+        request = ShieldRequest(prompt=request)
+
     # 1. Pre-Processing (Input Shield)
     # Check for Prompt Injection, Unsafe Content, etc.
     final_request, blocked_response = await pre_process_input(request)
@@ -78,7 +83,7 @@ class NewRule(BaseModel):
     is_active: bool = True
 
 @router.post("/rules")
-async def create_rule(rule: NewRule):
+async def create_rule(rule: Union[str, NewRule]):
     """Add a new rule to the ruleset (mock/in-memory)."""
     result = await add_rule(rule.rule_name, rule.type, rule.value, rule.is_active)
     return result

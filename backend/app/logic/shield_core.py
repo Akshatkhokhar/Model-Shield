@@ -2,13 +2,25 @@ import re
 from typing import Tuple, Optional
 from ..db.models import ShieldRequest, ShieldResponse, ThreatLog
 from ..db.supabase_client import log_threat, get_ruleset
-
-# --- Utility Functions (Simulated Checks) ---
+from .model_state import ML_MODEL
 
 def _check_prompt_injection(prompt: str, rules: list) -> Tuple[bool, Optional[str]]:
-    """Checks for common prompt injection attempts."""
+    """Checks for common prompt injection attempts using ML model and dynamic rules."""
+   
+    # Check 1: ML Model Prediction
+    if ML_MODEL:
+        try:
+            # The model is loaded and available
+            prediction = ML_MODEL.predict([prompt])[0]
+            if prediction == 1:
+                return True, "Prompt Injection: Detected by ML model"
+        except Exception as e:
+            print(f"ML Model Prediction Error: {e}")
+            # Continue to simpler checks if ML model fails
+           
+    # Check 2: Keyword-based check (Fallback/Ruleset)
     injection_keywords = ["ignore all previous instructions", "act as", "disregard", "system prompt", "reveal your code"]
-    
+
     # Add ruleset keywords to the check
     custom_keywords = [rule['value'] for rule in rules if rule['type'] == 'KEYWORD_BLOCK']
     all_keywords = injection_keywords + custom_keywords
@@ -17,7 +29,7 @@ def _check_prompt_injection(prompt: str, rules: list) -> Tuple[bool, Optional[st
         if keyword.lower() in prompt.lower():
             # Log the specific keyword that triggered the block
             return True, f"Prompt Injection: Detected keyword '{keyword}'"
-    
+
     return False, None
 
 def _check_unsafe_content(prompt: str) -> Tuple[bool, Optional[str]]:
@@ -33,13 +45,11 @@ def _check_hallucination(ai_response: str) -> Tuple[bool, Optional[str]]:
     # the LLM's confidence score.
     if "fact check failed: 99.9%" in ai_response.lower(): # A mock internal flag from the LLM
         return True, "Hallucination Detected: Response is unverified or false."
-    
+   
     if len(ai_response.split()) > 10 and not re.search(r'[.?!]', ai_response):
         return True, "Suspicious Output: Long response without standard punctuation."
-        
+       
     return False, None
-
-# --- Core Shield Functions ---
 
 async def pre_process_input(request: ShieldRequest) -> Tuple[ShieldRequest, Optional[ShieldResponse]]:
     """
@@ -47,7 +57,7 @@ async def pre_process_input(request: ShieldRequest) -> Tuple[ShieldRequest, Opti
     Returns: The original request and an optional blocked response.
     """
     rules = await get_ruleset() # Fetch dynamic rules from Supabase
-    
+   
     # 1. Prompt Injection Check
     is_blocked, reason = _check_prompt_injection(request.prompt, rules)
     if is_blocked:
@@ -58,7 +68,7 @@ async def pre_process_input(request: ShieldRequest) -> Tuple[ShieldRequest, Opti
             user_id=request.user_id
         ).model_dump()
         await log_threat(log_data)
-        
+       
         # Return a sanitized response instead of hitting the LLM
         return request, ShieldResponse(
             final_response="Request blocked by Model Shield. Reason: Prompt Injection attempt detected.",
@@ -76,7 +86,7 @@ async def pre_process_input(request: ShieldRequest) -> Tuple[ShieldRequest, Opti
             user_id=request.user_id
         ).model_dump()
         await log_threat(log_data)
-        
+       
         return request, ShieldResponse(
             final_response="Request blocked by Model Shield. Reason: Unsafe content policy violation.",
             is_blocked=True,
@@ -90,7 +100,7 @@ async def post_process_output(request: ShieldRequest, llm_response: str) -> Shie
     Output Shield: Runs checks on the LLM's response before it's sent to the user.
     Returns: The final response (potentially sanitized).
     """
-    
+   
     # 1. Hallucination Check
     is_blocked, reason = _check_hallucination(llm_response)
     if is_blocked:
@@ -101,7 +111,7 @@ async def post_process_output(request: ShieldRequest, llm_response: str) -> Shie
             user_id=request.user_id
         ).model_dump()
         await log_threat(log_data)
-        
+       
         # Return a warning instead of the false response
         return ShieldResponse(
             final_response="Warning: Model Shield flagged the original response for potential inaccuracies/hallucination. Please try rephrasing your prompt.",
