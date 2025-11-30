@@ -200,7 +200,7 @@ Multi-user support
 
 Author
 
-Developed by Akshat
+Developed by Akshat , Farhan , Amman , Sarhan
 
 License
 
