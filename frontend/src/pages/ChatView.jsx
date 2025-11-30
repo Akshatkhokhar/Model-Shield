@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+const API = import.meta.env.VITE_API_URL;
+
 function ChatView() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState([]);
@@ -10,25 +12,21 @@ function ChatView() {
     e.preventDefault();
     if (!prompt.trim() || isLoading) return;
 
-    // 1. Add user message to state
     const userMessage = { sender: 'user', text: prompt };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Clear input
     const userPrompt = prompt;
     setPrompt('');
     setIsLoading(true);
 
     try {
-      // 2. Call the Model Shield API endpoint
-      const response = await axios.post('/api/shield', {
+      const response = await axios.post(`${API}/api/shield`, {
         prompt: userPrompt,
-        user_id: 'hackathon_user_1' // Hardcode user ID for now
+        user_id: 'hackathon_user_1',
       });
 
       const { final_response, is_blocked, block_reason } = response.data;
 
-      // 3. Format the response from the Shield
       const shieldMessage = {
         sender: 'ai',
         text: final_response,
@@ -36,9 +34,7 @@ function ChatView() {
         reason: block_reason,
       };
 
-      // 4. Add the shielded response to state
       setMessages((prev) => [...prev, shieldMessage]);
-
     } catch (error) {
       console.error("Shield API Error:", error);
       setMessages((prev) => [
@@ -52,22 +48,28 @@ function ChatView() {
 
   return (
     <div className="h-[80vh] flex flex-col bg-white rounded-lg shadow-xl border border-gray-200">
-      <h2 className="text-xl font-semibold p-4 border-b border-gray-200 text-gray-900">Shield Test Chat</h2>
+      <h2 className="text-xl font-semibold p-4 border-b border-gray-200 text-gray-900">
+        Shield Test Chat
+      </h2>
 
-      {/* Message History */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div
+            key={index}
+            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
             <div
               className={`max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-xl shadow-md border ${
                 msg.sender === 'user'
                   ? 'bg-gray-100 border-gray-200 text-gray-800'
-                  : (msg.isBlocked
-                      ? 'bg-red-50 border-red-200 text-red-800'
-                      : 'bg-green-50 border-green-200 text-green-800')
+                  : msg.isBlocked
+                  ? 'bg-red-50 border-red-200 text-red-800'
+                  : 'bg-green-50 border-green-200 text-green-800'
               }`}
             >
-              <p className="font-bold text-sm mb-1">{msg.sender === 'user' ? 'You' : 'Shield AI'}</p>
+              <p className="font-bold text-sm mb-1">
+                {msg.sender === 'user' ? 'You' : 'Shield AI'}
+              </p>
               <p>{msg.text}</p>
               {msg.isBlocked && msg.reason && (
                 <p className="text-xs mt-1 italic">
@@ -87,7 +89,6 @@ function ChatView() {
         )}
       </div>
 
-      {/* Input Form */}
       <form onSubmit={sendMessage} className="p-4 border-t border-gray-200 flex">
         <input
           type="text"

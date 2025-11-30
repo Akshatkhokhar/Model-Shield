@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+const API = import.meta.env.VITE_API_URL;
+
 function BackendStatus() {
   const [status, setStatus] = useState('checking'); // 'ok' | 'error' | 'checking'
   const [message, setMessage] = useState('');
@@ -9,10 +11,11 @@ function BackendStatus() {
     setStatus('checking');
     setMessage('');
     try {
-      const res = await axios.post('/api/shield', {
+      const res = await axios.post(`${API}/api/shield`, {
         prompt: 'status check',
         user_id: 'status_probe',
       });
+
       if (res?.status === 200 && typeof res.data?.final_response === 'string') {
         setStatus('ok');
         setMessage('Backend responded successfully');
@@ -53,4 +56,3 @@ function BackendStatus() {
 }
 
 export default BackendStatus;
-

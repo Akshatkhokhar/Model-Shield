@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+const API = import.meta.env.VITE_API_URL;
+
 function ChatInterface({ open, onClose }) {
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState(null); // { text, isBlocked, reason }
@@ -15,7 +17,7 @@ function ChatInterface({ open, onClose }) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await axios.post('/api/shield', {
+      const res = await axios.post(`${API}/api/shield`, {
         prompt,
         user_id: 'landing_modal_user',
       });
@@ -57,14 +59,26 @@ function ChatInterface({ open, onClose }) {
           />
 
           <div className="flex items-center justify-end gap-3">
-            <button type="button" onClick={close} className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={loading} className="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold disabled:opacity-60">
+            <button type="button" onClick={close} className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-50">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold disabled:opacity-60"
+            >
               {loading ? 'Checking…' : 'Check Prompt'}
             </button>
           </div>
 
           {result && (
-            <div className={`mt-2 rounded-lg border p-4 text-sm ${result.isBlocked ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
+            <div
+              className={`mt-2 rounded-lg border p-4 text-sm ${
+                result.isBlocked
+                  ? 'bg-red-50 border-red-200 text-red-800'
+                  : 'bg-green-50 border-green-200 text-green-800'
+              }`}
+            >
               <p className="font-semibold mb-1">{result.isBlocked ? 'Malicious / Blocked' : 'Safe / Allowed'}</p>
               <p>{result.text}</p>
               {result.isBlocked && result.reason && (
@@ -79,4 +93,3 @@ function ChatInterface({ open, onClose }) {
 }
 
 export default ChatInterface;
-
