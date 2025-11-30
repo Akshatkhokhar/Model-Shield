@@ -47,8 +47,7 @@ app = FastAPI(title="Model Shield API", version="0.1.0", lifespan=lifespan)
 origins = [
     "http://localhost:5173",  # Vite dev server (change if you use 3000 etc.)
     "http://localhost:3000",
-    # Add your Vercel URL after frontend deploy, e.g.:
-    # "https://model-shield.vercel.app",
+    "https://model-shield-1.vercel.app"
 ]
 
 app.add_middleware(
