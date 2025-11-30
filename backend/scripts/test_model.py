@@ -1,17 +1,20 @@
 import joblib
-import os
+from pathlib import Path
 
-# Load the model
-MODEL_PATH = os.path.join('backend', 'app', 'models', 'MPDD.joblib')
+# Resolve model path relative to backend/app/models
+BASE_DIR = Path(__file__).resolve().parents[1] / 'app' / 'models'
+MODEL_PATH = BASE_DIR / 'MPDD.joblib'
 model = joblib.load(MODEL_PATH)
 
 # Check if it's a pipeline
 print(f"Model type: {type(model)}")
-print(f"Pipeline steps: {model.steps}")
+if hasattr(model, 'steps'):
+    print(f"Pipeline steps: {model.steps}")
 
 # Check if vectorizer is fitted
-vectorizer = model.named_steps['tfidfvectorizer']
-print(f"Vectorizer vocabulary size: {len(vectorizer.vocabulary_) if hasattr(vectorizer, 'vocabulary_') else 'Not fitted'}")
+vectorizer = getattr(model, 'named_steps', {}).get('tfidfvectorizer')
+if vectorizer is not None:
+    print(f"Vectorizer vocabulary size: {len(vectorizer.vocabulary_) if hasattr(vectorizer, 'vocabulary_') else 'Not fitted'}")
 
 # Test predictions with raw strings (pipeline should handle vectorization)
 test_prompts = [

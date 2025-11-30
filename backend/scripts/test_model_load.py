@@ -2,7 +2,7 @@ import joblib
 from pathlib import Path
 
 MODEL_NAME = 'MPDD.joblib'
-BASE_DIR = Path(__file__).resolve().parent / "backend" / "app" / "models"
+BASE_DIR = Path(__file__).resolve().parents[1] / "app" / "models"
 MODEL_PATH = BASE_DIR / MODEL_NAME
 
 try:

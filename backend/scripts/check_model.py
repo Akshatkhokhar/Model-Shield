@@ -1,10 +1,14 @@
 import pickle
-import os
+from pathlib import Path
 
-path = os.path.join('backend', 'app', 'models', 'MPDD.pkl')
-with open(path, 'rb') as f:
+# Resolve to backend/app/models
+BASE_DIR = Path(__file__).resolve().parents[1] / 'app' / 'models'
+PKL_PATH = BASE_DIR / 'MPDD.pkl'
+
+with open(PKL_PATH, 'rb') as f:
     data = pickle.load(f)
 
+print('Path:', PKL_PATH)
 print('Type:', type(data))
 if hasattr(data, 'shape'):
     print('Shape:', data.shape)

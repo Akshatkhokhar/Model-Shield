@@ -6,10 +6,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
+from pathlib import Path
 
-# Load the data
-data_path = os.path.join('backend', 'app', 'models', 'MPDD.joblib')
-df = joblib.load(data_path)
+# Resolve paths relative to this script location
+BASE_DIR = Path(__file__).resolve().parents[1] / 'app' / 'models'
+MODEL_PATH = BASE_DIR / 'MPDD.joblib'
+
+# Load the data (note: this assumes a dataset saved as joblib at MODEL_PATH)
+# If you intended to load a CSV of labeled prompts, replace this with e.g.:
+# df = pd.read_csv(BASE_DIR / 'dataset.csv')
+df = joblib.load(MODEL_PATH)
 
 print(f"Loaded data shape: {df.shape}")
 print(f"Columns: {df.columns.tolist()}")
@@ -37,8 +43,8 @@ print("Classification Report:")
 print(classification_report(y_test, y_pred))
 
 # Save the trained model
-model_path = os.path.join('backend', 'app', 'models', 'MPDD.joblib')
-joblib.dump(pipeline, model_path)
+BASE_DIR.mkdir(parents=True, exist_ok=True)
+joblib.dump(pipeline, MODEL_PATH)
 
-print(f"Model saved to {model_path}")
+print(f"Model saved to {MODEL_PATH}")
 print("Model training completed!")
